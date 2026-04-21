@@ -10,7 +10,7 @@
 
 Upload one image. Get production-ready favicons for every platform — Web, PWA/React, iOS/Apple, and Android — all processed locally in your browser. Nothing is ever uploaded to a server.
 
-**Live app → [favicon-generator-rho.vercel.app](https://favicon-generator-rho.vercel.app)**&nbsp;&nbsp;·&nbsp;&nbsp;**[Report a bug](https://github.com/petermarciniak/favicon-generator/issues/new?template=bug_report.yml)**
+**Live app → [favicon-generator-petermarc.vercel.app](https://favicon-generator-petermarc.vercel.app)**&nbsp;&nbsp;·&nbsp;&nbsp;**[Report a bug](https://github.com/petermarciniak/favicon-generator/issues/new?template=bug_report.yml)**
 
 <br>
 
