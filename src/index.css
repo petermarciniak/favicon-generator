@@ -44,4 +44,24 @@
   .animate-in {
     @apply animate-fade-in;
   }
+
+  .checkerboard {
+    background-color: #fff;
+    background-image:
+      linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+      linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+      linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+  }
+
+  .dark .checkerboard {
+    background-color: #1e293b;
+    background-image:
+      linear-gradient(45deg, #0f172a 25%, transparent 25%),
+      linear-gradient(-45deg, #0f172a 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #0f172a 75%),
+      linear-gradient(-45deg, transparent 75%, #0f172a 75%);
+  }
 }

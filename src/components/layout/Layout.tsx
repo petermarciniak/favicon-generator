@@ -11,7 +11,7 @@ export default function Layout() {
           <Outlet />
         </main>
         <footer className="border-t border-slate-200 py-4 text-center text-xs text-slate-400 dark:border-slate-700">
-          Built with the web-app-starter
+          Favicon Generator — generate icons for every platform
         </footer>
       </div>
     </ToastProvider>
