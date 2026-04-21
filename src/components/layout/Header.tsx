@@ -1,41 +1,36 @@
 import { Link } from 'react-router-dom'
-import { Moon, Sun, Menu } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '@/hooks/useTheme'
 
-interface HeaderProps {
-  onMenuClick?: () => void
-}
-
-export default function Header({ onMenuClick }: HeaderProps) {
+export default function Header() {
   const { theme, toggle } = useTheme()
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
-        <div className="flex items-center gap-6">
-          {onMenuClick && (
-            <Button variant="ghost" size="icon" onClick={onMenuClick} className="md:hidden">
-              <Menu className="h-5 w-5" />
-            </Button>
-          )}
-          <Link to="/" className="flex items-center gap-2 text-lg font-bold text-primary-600">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-600 text-white">
-              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="8" height="8" rx="1.5" />
-                <rect x="13" y="3" width="8" height="8" rx="1.5" />
-                <rect x="3" y="13" width="8" height="8" rx="1.5" />
-                <rect x="13" y="13" width="8" height="8" rx="1.5" />
-              </svg>
-            </span>
+    <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
+      <div className="mx-auto flex h-12 max-w-4xl items-center justify-between px-4">
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background transition-opacity group-hover:opacity-80">
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+              <rect x="2"  y="2"  width="7" height="7" rx="1.5" fill="currentColor" />
+              <rect x="11" y="2"  width="7" height="7" rx="1.5" fill="currentColor" />
+              <rect x="2"  y="11" width="7" height="7" rx="1.5" fill="currentColor" />
+              <rect x="11" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4" />
+            </svg>
+          </span>
+          <span className="text-[15px] font-semibold text-foreground">
             Favicon Generator
-          </Link>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
-        </div>
+          </span>
+        </Link>
+
+        <button
+          onClick={toggle}
+          aria-label="Toggle theme"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          {theme === 'dark'
+            ? <Sun  className="h-4 w-4" />
+            : <Moon className="h-4 w-4" />}
+        </button>
       </div>
     </header>
   )

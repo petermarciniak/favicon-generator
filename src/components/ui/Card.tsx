@@ -5,7 +5,8 @@ function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        'rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800',
+        'rounded-xl border border-border bg-card text-card-foreground',
+        'shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]',
         className
       )}
       {...props}
@@ -14,36 +15,25 @@ function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 }
 
 function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('flex flex-col gap-1 p-6 pb-4', className)} {...props} />
+  return <div className={cn('flex flex-col gap-1 p-5 pb-4', className)} {...props} />
 }
 
 function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3
-      className={cn('text-lg font-semibold leading-tight text-slate-900 dark:text-slate-100', className)}
-      {...props}
-    />
+    <h3 className={cn('text-base font-semibold leading-tight text-foreground', className)} {...props} />
   )
 }
 
 function CardDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn('text-sm text-slate-500 dark:text-slate-400', className)} {...props} />
+  return <p className={cn('text-[13px] text-muted-foreground', className)} {...props} />
 }
 
 function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('px-6 pb-4', className)} {...props} />
+  return <div className={cn('px-5 pb-4', className)} {...props} />
 }
 
 function CardFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        'flex items-center px-6 pb-6 pt-0',
-        className
-      )}
-      {...props}
-    />
-  )
+  return <div className={cn('flex items-center px-5 pb-5 pt-0', className)} {...props} />
 }
 
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }

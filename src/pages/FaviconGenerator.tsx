@@ -1,36 +1,51 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import {
-  Upload,
-  Download,
-  FileImage,
-  X,
-  Moon,
-  Sun,
-  Package,
-  Smartphone,
-  Globe,
-  Layers,
-  Archive,
-  ChevronDown,
-  ChevronUp,
-  Check,
-  Info,
+  Upload, Download, X, Moon, Sun, Package, Smartphone,
+  Globe, Layers, Archive, ChevronDown, ChevronUp, Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui'
+import { Button, Badge, Switch } from '@/components/ui'
+import { useAppFavicon } from '@/hooks/useAppFavicon'
 import {
-  generateFavicons,
+  generateForCategory,
   downloadBlob,
   downloadAllAsZip,
-  revokeGenerationResult,
-  FAVICON_SIZES,
+  revokeIcons,
   CATEGORY_META,
-  type GenerationResult,
   type FaviconCategory,
   type GeneratedIcon,
 } from '@/lib/favicon-generator'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const CATEGORIES: FaviconCategory[] = ['web', 'pwa', 'ios', 'android']
+
+const CATEGORY_ICONS: Record<FaviconCategory, React.ElementType> = {
+  web:     Globe,
+  pwa:     Layers,
+  ios:     Smartphone,
+  android: Package,
+}
+
+const CATEGORY_BADGE: Record<FaviconCategory, React.ComponentProps<typeof Badge>['variant']> = {
+  web:     'blue',
+  pwa:     'purple',
+  ios:     'default',
+  android: 'green',
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface CategoryState {
+  enabled: boolean
+  loading: boolean
+  icons: GeneratedIcon[]
+  icoBlob?: Blob
+  darkIcoBlob?: Blob
+  error?: string
+}
+
+// ─── Upload zone ─────────────────────────────────────────────────────────────
 
 interface UploadZoneProps {
   label: string
@@ -39,64 +54,40 @@ interface UploadZoneProps {
   previewUrl: string | null
   onFile: (file: File) => void
   onClear: () => void
-  theme?: 'light' | 'dark'
+  accent?: 'light' | 'dark'
 }
 
-// ─── Upload Zone ─────────────────────────────────────────────────────────────
-
-function UploadZone({ label, hint, file, previewUrl, onFile, onClear, theme }: UploadZoneProps) {
+function UploadZone({ label, hint, file, previewUrl, onFile, onClear, accent = 'light' }: UploadZoneProps) {
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setDragging(false)
-      const dropped = e.dataTransfer.files[0]
-      if (dropped && dropped.type.startsWith('image/')) onFile(dropped)
-    },
-    [onFile]
-  )
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (f) onFile(f)
-    e.target.value = ''
-  }
-
-  const bgClass =
-    theme === 'dark'
-      ? 'bg-slate-800 dark:bg-slate-950'
-      : 'bg-white dark:bg-slate-800'
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+    const f = e.dataTransfer.files[0]
+    if (f?.type.startsWith('image/')) onFile(f)
+  }, [onFile])
 
   if (file && previewUrl) {
     return (
-      <div
-        className={cn(
-          'relative flex flex-col items-center gap-3 rounded-xl border-2 p-5',
-          theme === 'dark'
-            ? 'border-slate-600 bg-slate-800/50 dark:border-slate-500 dark:bg-slate-900/50'
-            : 'border-primary-200 bg-primary-50/40 dark:border-primary-800/50 dark:bg-primary-900/20'
-        )}
-      >
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <div className={cn(
+        'relative flex flex-col items-center gap-2.5 rounded-xl border p-4',
+        accent === 'dark'
+          ? 'border-border bg-muted'
+          : 'border-border bg-card',
+      )}>
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
           {label}
         </span>
-        <div
-          className={cn(
-            'flex h-24 w-24 items-center justify-center rounded-xl',
-            theme === 'dark' ? 'bg-slate-700' : 'bg-slate-100 dark:bg-slate-700',
-            'checkerboard'
-          )}
-        >
-          <img src={previewUrl} alt="icon preview" className="h-20 w-20 object-contain" />
+        <div className="checkerboard flex h-20 w-20 items-center justify-center rounded-lg">
+          <img src={previewUrl} alt="preview" className="h-16 w-16 object-contain" />
         </div>
-        <p className="max-w-[160px] truncate text-center text-xs text-slate-500 dark:text-slate-400">
+        <p className="max-w-[140px] truncate text-center text-[11px] text-muted-foreground">
           {file.name}
         </p>
         <button
           onClick={onClear}
-          className="absolute right-2 top-2 rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-600 dark:hover:text-slate-200"
+          className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -108,82 +99,82 @@ function UploadZone({ label, hint, file, previewUrl, onFile, onClear, theme }: U
     <button
       type="button"
       onClick={() => inputRef.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+      onDragOver={e => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
       className={cn(
-        'flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed p-8 transition-all',
+        'flex w-full flex-col items-center gap-3 rounded-xl border border-dashed p-8 transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
         dragging
-          ? 'border-primary-400 bg-primary-50 dark:border-primary-500 dark:bg-primary-900/20'
-          : theme === 'dark'
-            ? 'border-slate-600 hover:border-slate-400 dark:border-slate-600 dark:hover:border-slate-400'
-            : 'border-slate-300 hover:border-primary-400 dark:border-slate-600 dark:hover:border-primary-500',
-        bgClass
+          ? 'border-focus bg-blue-50 dark:bg-blue-900/10'
+          : 'border-border bg-card hover:border-foreground/20 hover:bg-muted',
       )}
     >
-      <div
-        className={cn(
-          'flex h-12 w-12 items-center justify-center rounded-full',
-          theme === 'dark'
-            ? 'bg-slate-700 dark:bg-slate-800'
-            : 'bg-primary-50 dark:bg-primary-900/30'
-        )}
-      >
-        {theme === 'dark' ? (
-          <Moon className="h-6 w-6 text-slate-400" />
-        ) : (
-          <Upload className="h-6 w-6 text-primary-500" />
-        )}
+      <div className={cn(
+        'flex h-10 w-10 items-center justify-center rounded-xl',
+        accent === 'dark' ? 'bg-accent' : 'bg-accent',
+      )}>
+        {accent === 'dark'
+          ? <Moon className="h-5 w-5 text-muted-foreground" />
+          : <Upload className="h-5 w-5 text-muted-foreground" />}
       </div>
       <div className="text-center">
-        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</p>
-        <p className="mt-0.5 text-xs text-slate-400">{hint}</p>
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="mt-0.5 text-[12px] text-muted-foreground">{hint}</p>
       </div>
       <input
         ref={inputRef}
         type="file"
         accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
         className="hidden"
-        onChange={handleChange}
+        onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = '' }}
       />
     </button>
   )
 }
 
-// ─── Icon Preview Card ────────────────────────────────────────────────────────
+// ─── Icon card ────────────────────────────────────────────────────────────────
 
 interface IconCardProps {
   icon: GeneratedIcon
-  activeDark: boolean
+  viewDark: boolean
 }
 
-function IconCard({ icon, activeDark }: IconCardProps) {
-  const displayUrl = activeDark && icon.darkUrl ? icon.darkUrl : icon.url
-  const displayBlob = activeDark && icon.darkBlob ? icon.darkBlob : icon.blob
-
-  const displaySize = Math.max(icon.size.width, 32)
-  const containerSize = Math.max(displaySize, 48)
+function IconCard({ icon, viewDark }: IconCardProps) {
+  const url  = viewDark && icon.darkUrl  ? icon.darkUrl  : icon.url
+  const blob = viewDark && icon.darkBlob ? icon.darkBlob : icon.blob
+  const displayPx = Math.min(Math.max(icon.size.width, 32), 64)
+  const filename = icon.size.filename.split('/').pop()!
 
   return (
-    <div className="group flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-800">
+    <div className="group flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-3 transition-shadow hover:shadow-sm">
       <div
         className="checkerboard flex items-center justify-center rounded-lg"
-        style={{ width: containerSize + 16, height: containerSize + 16 }}
+        style={{ width: displayPx + 16, height: displayPx + 16 }}
       >
         <img
-          src={displayUrl}
+          src={url}
           alt={icon.size.label}
-          style={{ width: displaySize, height: displaySize, imageRendering: icon.size.width <= 32 ? 'pixelated' : 'auto' }}
+          style={{
+            width:  displayPx,
+            height: displayPx,
+            imageRendering: icon.size.width <= 32 ? 'pixelated' : 'auto',
+          }}
           className="object-contain"
         />
       </div>
       <div className="w-full text-center">
-        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{icon.size.label}</p>
-        <p className="truncate text-[10px] text-slate-400 dark:text-slate-500">{icon.size.description}</p>
+        <p className="text-[12px] font-semibold text-foreground">{icon.size.label}</p>
+        <p className="truncate text-[10px] text-muted-foreground">{icon.size.description}</p>
       </div>
       <button
-        onClick={() => downloadBlob(displayBlob, icon.size.filename.split('/').pop()!)}
-        className="flex w-full items-center justify-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-slate-500 opacity-0 transition-all hover:bg-primary-50 hover:text-primary-600 group-hover:opacity-100 dark:text-slate-400 dark:hover:bg-primary-900/30 dark:hover:text-primary-400"
+        onClick={() => downloadBlob(blob, filename)}
+        className={cn(
+          'flex w-full items-center justify-center gap-1 rounded-md px-2 py-1',
+          'text-[10px] font-medium text-muted-foreground',
+          'opacity-0 transition-opacity group-hover:opacity-100',
+          'hover:bg-accent hover:text-foreground',
+        )}
       >
         <Download className="h-3 w-3" />
         Download
@@ -192,139 +183,216 @@ function IconCard({ icon, activeDark }: IconCardProps) {
   )
 }
 
-// ─── Category Panel ───────────────────────────────────────────────────────────
+// ─── Platform card ────────────────────────────────────────────────────────────
 
-const CATEGORY_ICONS: Record<FaviconCategory, React.ElementType> = {
-  web: Globe,
-  pwa: Layers,
-  ios: Smartphone,
-  android: Package,
-}
-
-interface CategoryPanelProps {
+interface PlatformCardProps {
   category: FaviconCategory
-  icons: GeneratedIcon[]
-  showDark: boolean
-  activeDark: boolean
-  onToggleDark: () => void
-  defaultOpen?: boolean
+  state: CategoryState
+  hasDarkFile: boolean
+  viewDark: boolean
+  onToggle: (enabled: boolean) => void
+  onToggleViewDark: () => void
+  onDownloadIco?: () => void
+  onDownloadDarkIco?: () => void
 }
 
-function CategoryPanel({
-  category,
-  icons,
-  showDark,
-  activeDark,
-  onToggleDark,
-  defaultOpen = true,
-}: CategoryPanelProps) {
-  const [open, setOpen] = useState(defaultOpen)
+function PlatformCard({
+  category, state, hasDarkFile, viewDark,
+  onToggle, onToggleViewDark,
+  onDownloadIco, onDownloadDarkIco,
+}: PlatformCardProps) {
+  const [open, setOpen] = useState(true)
   const meta = CATEGORY_META[category]
   const Icon = CATEGORY_ICONS[category]
 
-  const colorMap: Record<string, string> = {
-    blue: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30',
-    purple: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30',
-    gray: 'text-slate-600 bg-slate-100 dark:text-slate-300 dark:bg-slate-700',
-    green: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30',
-  }
-
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700/50"
-      >
-        <div className="flex items-center gap-2.5">
-          <div className={cn('flex h-7 w-7 items-center justify-center rounded-md', colorMap[meta.color])}>
-            <Icon className="h-4 w-4" />
+    <div className={cn(
+      'overflow-hidden rounded-xl border transition-all duration-200',
+      state.enabled
+        ? 'border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.25)]'
+        : 'border-dashed border-border bg-muted/40 opacity-60',
+    )}>
+      {/* Header row */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <Switch
+          checked={state.enabled}
+          onCheckedChange={onToggle}
+          className="shrink-0"
+        />
+
+        <button
+          onClick={() => state.enabled && setOpen(o => !o)}
+          className="flex flex-1 items-center gap-2.5 text-left"
+        >
+          <div className={cn(
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
+            state.enabled ? 'bg-accent' : 'bg-accent/50',
+          )}>
+            <Icon className="h-4 w-4 text-foreground" />
           </div>
-          <span className="font-semibold text-slate-800 dark:text-slate-200">{meta.label}</span>
-          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-400">
-            {icons.length}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          {showDark && (
+          <div className="flex flex-1 items-center gap-2 min-w-0">
+            <span className={cn(
+              'text-sm font-semibold',
+              state.enabled ? 'text-foreground' : 'text-muted-foreground',
+            )}>
+              {meta.label}
+            </span>
+            <Badge variant={CATEGORY_BADGE[category]}>
+              {meta.count} sizes
+            </Badge>
+          </div>
+        </button>
+
+        <div className="flex items-center gap-2">
+          {state.loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+
+          {state.enabled && state.icons.length > 0 && hasDarkFile && (
             <button
-              onClick={(e) => { e.stopPropagation(); onToggleDark() }}
+              onClick={e => { e.stopPropagation(); onToggleViewDark() }}
               className={cn(
-                'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
-                activeDark
-                  ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                'flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors',
+                viewDark
+                  ? 'bg-foreground text-background'
+                  : 'bg-accent text-foreground hover:bg-neutral-300 dark:hover:bg-neutral-600',
               )}
             >
-              {activeDark ? <Moon className="h-3 w-3" /> : <Sun className="h-3 w-3" />}
-              {activeDark ? 'Dark' : 'Light'}
+              {viewDark ? <Moon className="h-3 w-3" /> : <Sun className="h-3 w-3" />}
+              {viewDark ? 'Dark' : 'Light'}
             </button>
           )}
-          {open ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+
+          {state.enabled && state.icons.length > 0 && (
+            <button
+              onClick={() => setOpen(o => !o)}
+              className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+          )}
         </div>
-      </button>
-      {open && (
-        <div className="grid grid-cols-3 gap-3 p-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
-          {icons.map((icon) => (
+      </div>
+
+      {/* ICO download row for web */}
+      {category === 'web' && state.enabled && state.icoBlob && (
+        <div className="flex gap-2 px-4 pb-3">
+          <button
+            onClick={onDownloadIco}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            <Download className="h-3.5 w-3.5" />
+            favicon.ico
+          </button>
+          {hasDarkFile && state.darkIcoBlob && (
+            <button
+              onClick={onDownloadDarkIco}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <Moon className="h-3.5 w-3.5" />
+              favicon-dark.ico
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Icon grid */}
+      {state.enabled && state.icons.length > 0 && open && (
+        <div className="grid grid-cols-3 gap-2.5 px-4 pb-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 animate-slide-up">
+          {state.icons.map(icon => (
             <IconCard
               key={icon.size.filename}
               icon={icon}
-              activeDark={activeDark}
+              viewDark={viewDark}
             />
           ))}
         </div>
+      )}
+
+      {state.error && (
+        <p className="px-4 pb-3 text-[12px] text-destructive">{state.error}</p>
       )}
     </div>
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Main page ────────────────────────────────────────────────────────────────
 
-const CATEGORIES: FaviconCategory[] = ['web', 'pwa', 'ios', 'android']
+const defaultCategoryState = (): CategoryState => ({
+  enabled: false,
+  loading: false,
+  icons: [],
+})
 
 export default function FaviconGenerator() {
-  const [lightFile, setLightFile] = useState<File | null>(null)
+  const [lightFile,    setLightFile]    = useState<File | null>(null)
   const [lightPreview, setLightPreview] = useState<string | null>(null)
-  const [darkFile, setDarkFile] = useState<File | null>(null)
-  const [darkPreview, setDarkPreview] = useState<string | null>(null)
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false)
-  const [generating, setGenerating] = useState(false)
-  const [result, setResult] = useState<GenerationResult | null>(null)
-  const [activeDarkCategories, setActiveDarkCategories] = useState<Set<FaviconCategory>>(new Set())
-  const [appName, setAppName] = useState('my-app')
-  const [downloadingZip, setDownloadingZip] = useState(false)
-  const [generated, setGenerated] = useState(false)
+  const [darkFile,     setDarkFile]     = useState<File | null>(null)
+  const [darkPreview,  setDarkPreview]  = useState<string | null>(null)
+  const [darkModeOn,   setDarkModeOn]   = useState(false)
+  const [appName,      setAppName]      = useState('my-app')
+  const [zipping,      setZipping]      = useState(false)
 
-  // Cleanup blob URLs on unmount
-  useEffect(() => {
-    return () => {
-      if (result) revokeGenerationResult(result)
-      if (lightPreview) URL.revokeObjectURL(lightPreview)
-      if (darkPreview) URL.revokeObjectURL(darkPreview)
-    }
-  }, []) // eslint-disable-line
+  // Per-category state
+  const [catStates, setCatStates] = useState<Record<FaviconCategory, CategoryState>>({
+    web:     defaultCategoryState(),
+    pwa:     defaultCategoryState(),
+    ios:     defaultCategoryState(),
+    android: defaultCategoryState(),
+  })
 
-  const handleLightFile = (file: File) => {
+  // Per-category dark view toggle (light vs dark preview)
+  const [viewDark, setViewDark] = useState<Record<FaviconCategory, boolean>>({
+    web: false, pwa: false, ios: false, android: false,
+  })
+
+  // Dynamic app favicon (updates browser tab immediately on upload)
+  useAppFavicon(lightPreview, darkPreview)
+
+  // Track active light/dark 32px preview URLs for the favicon hook
+  // We use the file preview URL so it updates before generation
+
+  // ── File handlers ──────────────────────────────────────────────────────────
+
+  const setLight = (file: File) => {
     if (lightPreview) URL.revokeObjectURL(lightPreview)
     setLightFile(file)
     setLightPreview(URL.createObjectURL(file))
-    setResult(null)
-    setGenerated(false)
-  }
-
-  const handleDarkFile = (file: File) => {
-    if (darkPreview) URL.revokeObjectURL(darkPreview)
-    setDarkFile(file)
-    setDarkPreview(URL.createObjectURL(file))
-    setResult(null)
-    setGenerated(false)
+    // Invalidate all generated icons when source changes
+    setCatStates(prev => {
+      const next = { ...prev }
+      for (const cat of CATEGORIES) {
+        if (next[cat].icons.length) {
+          revokeIcons(next[cat].icons)
+          next[cat] = { ...next[cat], icons: [], icoBlob: undefined, darkIcoBlob: undefined }
+        }
+      }
+      return next
+    })
   }
 
   const clearLight = () => {
     if (lightPreview) URL.revokeObjectURL(lightPreview)
     setLightFile(null)
     setLightPreview(null)
-    setResult(null)
-    setGenerated(false)
+    setCatStates({
+      web: defaultCategoryState(), pwa: defaultCategoryState(),
+      ios: defaultCategoryState(), android: defaultCategoryState(),
+    })
+  }
+
+  const setDark = (file: File) => {
+    if (darkPreview) URL.revokeObjectURL(darkPreview)
+    setDarkFile(file)
+    setDarkPreview(URL.createObjectURL(file))
+    setCatStates(prev => {
+      const next = { ...prev }
+      for (const cat of CATEGORIES) {
+        if (next[cat].icons.length) {
+          revokeIcons(next[cat].icons)
+          next[cat] = { ...next[cat], icons: [], icoBlob: undefined, darkIcoBlob: undefined }
+        }
+      }
+      return next
+    })
   }
 
   const clearDark = () => {
@@ -333,266 +401,271 @@ export default function FaviconGenerator() {
     setDarkPreview(null)
   }
 
-  const handleGenerate = async () => {
+  // ── Category toggle ────────────────────────────────────────────────────────
+
+  const handleCategoryToggle = useCallback(async (cat: FaviconCategory, enabled: boolean) => {
     if (!lightFile) return
-    setGenerating(true)
+
+    setCatStates(prev => ({ ...prev, [cat]: { ...prev[cat], enabled } }))
+    if (!enabled) return
+
+    // Already have icons → just re-enable display, no re-generation needed
+    setCatStates(prev => {
+      if (prev[cat].icons.length > 0) return prev
+      return { ...prev, [cat]: { ...prev[cat], loading: true, error: undefined } }
+    })
+
     try {
-      if (result) revokeGenerationResult(result)
-      const newResult = await generateFavicons(lightFile, darkModeEnabled ? darkFile ?? undefined : undefined)
-      setResult(newResult)
-      setGenerated(true)
-    } finally {
-      setGenerating(false)
+      const result = await generateForCategory(
+        lightFile,
+        darkModeOn ? (darkFile ?? null) : null,
+        cat
+      )
+      setCatStates(prev => ({
+        ...prev,
+        [cat]: {
+          enabled: true,
+          loading: false,
+          icons:        result.icons,
+          icoBlob:      result.icoBlob,
+          darkIcoBlob:  result.darkIcoBlob,
+        },
+      }))
+    } catch {
+      setCatStates(prev => ({
+        ...prev,
+        [cat]: { ...prev[cat], loading: false, error: 'Generation failed — please try again.' },
+      }))
     }
-  }
+  }, [lightFile, darkFile, darkModeOn])
+
+  // Re-generate all active categories when the dark file changes
+  useEffect(() => {
+    if (!lightFile) return
+    CATEGORIES.forEach(cat => {
+      const s = catStates[cat]
+      if (s.enabled && s.icons.length > 0) {
+        handleCategoryToggle(cat, true)
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [darkFile])
+
+  // ── Download ───────────────────────────────────────────────────────────────
 
   const handleDownloadAll = async () => {
-    if (!result) return
-    setDownloadingZip(true)
+    setZipping(true)
     try {
-      await downloadAllAsZip(result, darkModeEnabled && !!darkFile, appName || 'favicon')
+      const map = new Map<FaviconCategory, typeof catStates['web']>()
+      for (const cat of CATEGORIES) {
+        if (catStates[cat].enabled && catStates[cat].icons.length > 0) {
+          map.set(cat, catStates[cat])
+        }
+      }
+      await downloadAllAsZip(map, darkModeOn && !!darkFile, appName || 'favicon')
     } finally {
-      setDownloadingZip(false)
+      setZipping(false)
     }
   }
 
-  const handleDownloadIco = () => {
-    if (!result) return
-    downloadBlob(result.faviconIco, 'favicon.ico')
-  }
+  // ── Derived state ─────────────────────────────────────────────────────────
 
-  const toggleDarkCategory = (cat: FaviconCategory) => {
-    setActiveDarkCategories((prev) => {
-      const next = new Set(prev)
-      next.has(cat) ? next.delete(cat) : next.add(cat)
-      return next
-    })
-  }
+  const hasAnyIcons = CATEGORIES.some(c => catStates[c].icons.length > 0)
+  const totalIcons  = CATEGORIES.reduce((n, c) => n + catStates[c].icons.length, 0)
+  const hasDark     = darkModeOn && !!darkFile
 
-  const iconsByCategory = result
-    ? CATEGORIES.reduce(
-        (acc, cat) => {
-          acc[cat] = result.icons.filter((i) => i.size.category === cat)
-          return acc
-        },
-        {} as Record<FaviconCategory, GeneratedIcon[]>
-      )
-    : null
-
-  const hasDark = darkModeEnabled && !!darkFile && !!result?.darkFaviconIco
-  const totalCount = FAVICON_SIZES.length
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (lightPreview) URL.revokeObjectURL(lightPreview)
+      if (darkPreview)  URL.revokeObjectURL(darkPreview)
+      CATEGORIES.forEach(cat => revokeIcons(catStates[cat].icons))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-8">
-      {/* Hero */}
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+
+      {/* ── Hero ── */}
       <div className="text-center">
-        <div className="mb-3 flex items-center justify-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 shadow-md">
-            <FileImage className="h-5 w-5 text-white" />
-          </div>
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+        <h1 className="text-[28px] font-bold tracking-tight text-foreground">
           Favicon Generator
         </h1>
-        <p className="mt-2 text-slate-500 dark:text-slate-400">
-          Generate {totalCount} favicon sizes for Web, PWA/React, iOS & Android from a single image.
+        <p className="mt-1.5 text-[14px] text-muted-foreground">
+          Upload one image. Get production-ready icons for every platform.
         </p>
       </div>
 
-      {/* Step 1 — Upload */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <div className="mb-5 flex items-center justify-between">
+      {/* ── Step 1: Upload ── */}
+      <section className="rounded-2xl border border-border bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.25)]">
+        <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white">
-              1
-            </span>
-            <h2 className="font-semibold text-slate-900 dark:text-slate-100">Upload your icon</h2>
+            <StepBadge n={1} />
+            <h2 className="text-sm font-semibold text-foreground">Upload icon</h2>
           </div>
-          <span className="text-xs text-slate-400">PNG, JPG, SVG, WebP supported</span>
+          <span className="text-[12px] text-muted-foreground">PNG · JPG · SVG · WebP</span>
         </div>
 
-        <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
           <div className="flex-1">
             <UploadZone
-              label="Light mode icon"
+              label="Light / default"
               hint="Click to browse or drag & drop"
               file={lightFile}
               previewUrl={lightPreview}
-              onFile={handleLightFile}
+              onFile={setLight}
               onClear={clearLight}
-              theme="light"
+              accent="light"
             />
           </div>
 
           {/* Dark mode toggle */}
-          <div className="flex flex-col items-center justify-center gap-3">
-            <button
-              onClick={() => setDarkModeEnabled((v) => !v)}
-              className={cn(
-                'flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all',
-                darkModeEnabled
-                  ? 'bg-slate-800 text-white shadow-sm dark:bg-slate-200 dark:text-slate-900'
-                  : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
-              )}
-            >
-              <Moon className="h-4 w-4" />
-              {darkModeEnabled ? 'Dark mode on' : 'Add dark mode icon'}
-            </button>
-            {darkModeEnabled && (
-              <p className="max-w-[120px] text-center text-[10px] text-slate-400">Optional separate icon for dark UI</p>
+          <div className="flex flex-col items-center justify-center gap-2 py-4">
+            <Switch
+              checked={darkModeOn}
+              onCheckedChange={v => {
+                setDarkModeOn(v)
+                if (!v) clearDark()
+              }}
+              label="Dark icon"
+            />
+            {darkModeOn && (
+              <p className="max-w-[100px] text-center text-[11px] text-muted-foreground">
+                Optional separate icon for dark UIs
+              </p>
             )}
           </div>
 
-          {darkModeEnabled && (
+          {darkModeOn && (
             <div className="flex-1">
               <UploadZone
-                label="Dark mode icon"
-                hint="Optional — uses light icon if skipped"
+                label="Dark mode"
+                hint="Uses light icon if skipped"
                 file={darkFile}
                 previewUrl={darkPreview}
-                onFile={handleDarkFile}
+                onFile={setDark}
                 onClear={clearDark}
-                theme="dark"
+                accent="dark"
               />
             </div>
           )}
         </div>
 
-        {/* App name + generate */}
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-400">
-              App / project name <span className="text-slate-400">(used in manifest & ZIP filename)</span>
-            </label>
-            <input
-              type="text"
-              value={appName}
-              onChange={(e) => setAppName(e.target.value)}
-              placeholder="my-app"
-              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-            />
-          </div>
-          <Button
-            onClick={handleGenerate}
-            disabled={!lightFile || generating}
-            loading={generating}
-            size="md"
-            className="shrink-0 sm:h-9"
-          >
-            {generating ? 'Generating…' : generated ? 'Re-generate' : 'Generate favicons'}
-          </Button>
+        {/* App name */}
+        <div className="mt-4">
+          <label className="mb-1.5 block text-[12px] font-medium text-muted-foreground">
+            App name <span className="text-muted-foreground/60">(used in ZIP filename and manifest)</span>
+          </label>
+          <input
+            type="text"
+            value={appName}
+            onChange={e => setAppName(e.target.value)}
+            placeholder="my-app"
+            className={cn(
+              'h-8 w-full rounded-lg border border-border bg-background px-3',
+              'text-[13px] text-foreground placeholder-muted-foreground',
+              'focus:outline-none focus:ring-2 focus:ring-focus transition-shadow',
+            )}
+          />
         </div>
       </section>
 
-      {/* Results */}
-      {result && iconsByCategory && (
-        <>
-          {/* Step 2 — Download */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="mb-4 flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white">
-                2
+      {/* ── Step 2: Platforms ── */}
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <StepBadge n={2} />
+          <h2 className="text-sm font-semibold text-foreground">Select platforms</h2>
+          {!lightFile && (
+            <span className="text-[12px] text-muted-foreground">— upload an icon first</span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          {CATEGORIES.map(cat => (
+            <PlatformCard
+              key={cat}
+              category={cat}
+              state={catStates[cat]}
+              hasDarkFile={hasDark}
+              viewDark={viewDark[cat]}
+              onToggle={enabled => {
+                if (!lightFile) return
+                handleCategoryToggle(cat, enabled)
+              }}
+              onToggleViewDark={() => setViewDark(prev => ({ ...prev, [cat]: !prev[cat] }))}
+              onDownloadIco={
+                catStates[cat].icoBlob
+                  ? () => downloadBlob(catStates[cat].icoBlob!, 'favicon.ico')
+                  : undefined
+              }
+              onDownloadDarkIco={
+                catStates[cat].darkIcoBlob
+                  ? () => downloadBlob(catStates[cat].darkIcoBlob!, 'favicon-dark.ico')
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* ── Step 3: Download ── */}
+      {hasAnyIcons && (
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.25)] animate-slide-up">
+          <div className="mb-4 flex items-center gap-2">
+            <StepBadge n={3} />
+            <h2 className="text-sm font-semibold text-foreground">Download</h2>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleDownloadAll} loading={zipping} size="md" className="gap-2">
+              <Archive className="h-4 w-4" />
+              Download ZIP
+              <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold">
+                {totalIcons + (hasDark ? totalIcons : 0) + (catStates.web.icoBlob ? 1 : 0)} files
               </span>
-              <h2 className="font-semibold text-slate-900 dark:text-slate-100">Download</h2>
-            </div>
+            </Button>
+          </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={handleDownloadAll}
-                loading={downloadingZip}
-                className="flex items-center gap-2"
-              >
-                <Archive className="h-4 w-4" />
-                Download all as ZIP
-                <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px]">
-                  {totalCount + (hasDark ? totalCount : 0) + 1} files
-                </span>
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleDownloadIco}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                favicon.ico
-                <span className="text-xs text-slate-400">(16, 32, 48px)</span>
-              </Button>
-
-              {hasDark && result.darkFaviconIco && (
-                <Button
-                  variant="outline"
-                  onClick={() => downloadBlob(result.darkFaviconIco!, 'favicon-dark.ico')}
-                  className="flex items-center gap-2"
-                >
-                  <Moon className="h-4 w-4" />
-                  favicon-dark.ico
-                </Button>
-              )}
-            </div>
-
-            <div className="mt-4 flex items-start gap-2 rounded-lg bg-primary-50 p-3 dark:bg-primary-900/20">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary-500" />
-              <p className="text-xs text-primary-700 dark:text-primary-300">
-                The ZIP includes a <code className="rounded bg-primary-100 px-1 dark:bg-primary-800">README_html_snippet.html</code> with ready-to-paste{' '}
-                <code className="rounded bg-primary-100 px-1 dark:bg-primary-800">&lt;link&gt;</code> tags, and a{' '}
-                <code className="rounded bg-primary-100 px-1 dark:bg-primary-800">manifest_snippet.json</code> for your PWA.
-              </p>
-            </div>
-          </section>
-
-          {/* Step 3 — Preview */}
-          <section>
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white">
-                  3
-                </span>
-                <h2 className="font-semibold text-slate-900 dark:text-slate-100">Preview</h2>
-              </div>
-              {hasDark && (
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  <Check className="h-3.5 w-3.5 text-green-500" />
-                  Dark mode icons generated
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-4">
-              {CATEGORIES.map((cat) => (
-                <CategoryPanel
-                  key={cat}
-                  category={cat}
-                  icons={iconsByCategory[cat]}
-                  showDark={hasDark}
-                  activeDark={activeDarkCategories.has(cat)}
-                  onToggleDark={() => toggleDarkCategory(cat)}
-                  defaultOpen={cat === 'web' || cat === 'pwa'}
-                />
-              ))}
-            </div>
-          </section>
-        </>
+          <p className="mt-3 text-[12px] text-muted-foreground">
+            ZIP includes{' '}
+            <code className="rounded bg-accent px-1 py-0.5 text-[11px]">favicon.ico</code>,
+            all PNGs, a demo{' '}
+            <code className="rounded bg-accent px-1 py-0.5 text-[11px]">index.html</code>{' '}
+            with previews, and a{' '}
+            <code className="rounded bg-accent px-1 py-0.5 text-[11px]">manifest.webmanifest</code>.
+          </p>
+        </section>
       )}
 
-      {/* Empty state hint */}
-      {!result && !generating && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-14 dark:border-slate-700">
-          <div className="flex gap-3 opacity-40">
-            {(['web', 'pwa', 'ios', 'android'] as const).map((cat) => {
+      {/* ── Empty hint ── */}
+      {!lightFile && (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border py-14">
+          <div className="flex gap-3 opacity-30">
+            {CATEGORIES.map(cat => {
               const Icon = CATEGORY_ICONS[cat]
               return (
-                <div key={cat} className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700">
-                  <Icon className="h-5 w-5 text-slate-500 dark:text-slate-400" />
+                <div key={cat} className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent">
+                  <Icon className="h-5 w-5 text-foreground" />
                 </div>
               )
             })}
           </div>
-          <p className="text-sm text-slate-400 dark:text-slate-500">
-            Upload an image above and click <strong className="text-slate-500 dark:text-slate-400">Generate favicons</strong>
+          <p className="text-[13px] text-muted-foreground">
+            Upload an icon to get started
           </p>
         </div>
       )}
     </div>
+  )
+}
+
+// ─── Step badge ───────────────────────────────────────────────────────────────
+
+function StepBadge({ n }: { n: number }) {
+  return (
+    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-[11px] font-bold text-background">
+      {n}
+    </span>
   )
 }

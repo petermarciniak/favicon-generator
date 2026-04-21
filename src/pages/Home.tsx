@@ -55,7 +55,7 @@ export default function Home() {
     <div className="flex flex-col gap-12">
       {/* Hero */}
       <section className="text-center">
-        <Badge variant="primary" className="mb-4">
+        <Badge variant="blue" className="mb-4">
           Prototype starter
         </Badge>
         <h1 className="mb-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
