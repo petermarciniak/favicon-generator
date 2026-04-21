@@ -1,14 +1,13 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from '@/components/layout/Layout'
-import Home from '@/pages/Home'
+import FaviconGenerator from '@/pages/FaviconGenerator'
 import NotFound from '@/pages/NotFound'
 
 export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<Home />} />
-        {/* Add new routes here */}
+        <Route path="/" element={<FaviconGenerator />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
