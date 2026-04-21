@@ -10,7 +10,7 @@
 
 Upload one image. Get production-ready favicons for every platform — Web, PWA/React, iOS/Apple, and Android — all processed locally in your browser. Nothing is ever uploaded to a server.
 
-**Live app → [favicon-generator-rho.vercel.app](https://favicon-generator-rho.vercel.app)**
+**Live app → [favicon-generator-rho.vercel.app](https://favicon-generator-rho.vercel.app)**&nbsp;&nbsp;·&nbsp;&nbsp;**[Report a bug](https://github.com/petermarciniak/favicon-generator/issues/new?template=bug_report.yml)**
 
 <br>
 
@@ -207,12 +207,45 @@ This is a **legacy EdgeHTML bug** (pre-2020 Edge) caused by incorrect XOR mask r
 
 ---
 
+## ▓▓▓ CHANGELOG
+
+### v1.1.0 — 2026-04-21
+
+**New**
+- Platform toggles — Web, PWA/React, iOS/Apple, Android each generate independently; nothing pre-generated on load
+- Live browser tab favicon — tab icon updates the moment a source image is uploaded
+- System dark mode sync — favicon switches to the dark variant when OS changes to dark mode
+- Demo `index.html` in ZIP — open in a browser to confirm the favicon is live; shows all sizes as a visual grid
+
+**Improved**
+- Aspect ratio fix — contain-mode scaling (centered, no stretch) prevents distorted or cropped icons for non-square source images
+- fluid-ui design system — neutral palette, Geist variable font, rebuilt Button / Badge / Card / Switch components
+- Per-category light ↔ dark preview toggle in each platform section
+- Privacy note in footer — all processing runs locally, zero uploads
+
+**Fixed**
+- PNG-inside-ICO format (no BMP/XOR mask) — eliminates legacy EdgeHTML "1px right-edge line" artifact on transparent icons
+
+---
+
+### v1.0.0 — 2026-04-21
+
+**Initial release**
+- Upload PNG · SVG · JPG · WebP source image
+- Generate 27 favicon sizes across Web, PWA/React, iOS/Apple, Android
+- Optional dark-mode icon with separate upload zone
+- favicon.ico builder (16 × 32 × 48 px, PNG-in-ICO)
+- Download all as ZIP with PWA manifest snippet and HTML `<link>` tags
+- Light / dark mode UI with system preference detection
+
+---
+
 <div align="center">
 
 ```
 Built by Peter Marciniak — product designer building with AI
 ```
 
-**[← Back to profile](https://github.com/petermarciniak)**
+**[← Back to profile](https://github.com/petermarciniak)**&nbsp;&nbsp;·&nbsp;&nbsp;**[Report a bug](https://github.com/petermarciniak/favicon-generator/issues/new?template=bug_report.yml)**
 
 </div>
