@@ -5,13 +5,13 @@ import Header from './Header'
 export default function Layout() {
   return (
     <ToastProvider>
-      <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
+      <div className="flex min-h-screen flex-col bg-background">
         <Header />
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
+        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
           <Outlet />
         </main>
-        <footer className="border-t border-slate-200 py-4 text-center text-xs text-slate-400 dark:border-slate-700">
-          Favicon Generator — generate icons for every platform
+        <footer className="border-t border-border py-4 text-center text-[12px] text-muted-foreground">
+          Favicon Generator — all processing runs locally in your browser, nothing is uploaded.
         </footer>
       </div>
     </ToastProvider>

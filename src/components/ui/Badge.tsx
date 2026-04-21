@@ -2,22 +2,25 @@ import { type HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
 const variants = {
-  default: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
-  primary: 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300',
-  success: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
-  warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
-  danger: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
+  default: 'bg-accent text-foreground',
+  blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  purple: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  green: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  orange: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  red: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: keyof typeof variants
+  size?: 'sm' | 'md'
 }
 
-function Badge({ className, variant = 'default', ...props }: BadgeProps) {
+function Badge({ className, variant = 'default', size = 'sm', ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+        'inline-flex items-center rounded-full font-medium whitespace-nowrap',
+        size === 'sm' ? 'h-5 px-2 text-[11px]' : 'h-6 px-2.5 text-xs',
         variants[variant],
         className
       )}
