@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.1.1] - 2026-04-24
 
 ### Fixed
 
@@ -19,3 +19,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     PNG; non-zero values can lead parsers (including Edge) to attempt legacy BMP
     interpretation before checking the PNG magic bytes, risking further rendering
     artefacts. Both fields are now set to `0`.
+
+[0.1.1]: https://github.com/petermarciniak/favicon-generator/compare/v0.1.0...v0.1.1
