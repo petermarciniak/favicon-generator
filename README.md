@@ -199,15 +199,30 @@ npm run preview   # Preview the production build
 
 ## ▓▓▓ EDGE / TRANSPARENCY QA
 
-A commonly reported issue: _"transparent favicons show a 1px line on the right in Edge."_
+A commonly reported issue: _"transparent favicons show a 1px line in Edge."_
 
-This is a **legacy EdgeHTML bug** (pre-2020 Edge) caused by incorrect XOR mask rendering in the old BMP-based ICO format. This app generates **PNG-inside-ICO** files — a modern format that embeds raw PNG data with native alpha channels, skipping the XOR mask entirely. Edge Chromium (2020+), Chrome, Firefox, and Safari all render these correctly. The risk of the artifact is effectively zero for any browser released after 2020.
+Two root causes have been identified and fixed:
+
+1. **Sub-pixel rendering** — for non-square source images, scaling calculations produced fractional pixel coordinates. With `imageSmoothingQuality: 'high'` the Canvas API interpolated across pixel boundaries, creating a faint 1 px fringe at the image edge that Edge rendered as a visible line against transparent areas. All coordinates are now rounded to integers with `Math.round()`.
+
+2. **ICO directory entry format** — the `ICONDIRENTRY` fields `wPlanes` and `wBitCount` were set to `1` and `32` for PNG-embedded images. Per the ICO specification both must be `0` for PNG data; non-zero values can cause parsers (including Edge) to attempt legacy BMP interpretation before checking the PNG magic bytes. Both fields are now `0`.
+
+The app also generates **PNG-inside-ICO** files (no legacy BMP/XOR mask), which ensures correct transparency rendering in Edge Chromium (2020+), Chrome, Firefox, and Safari.
 
 <br>
 
 ---
 
 ## ▓▓▓ CHANGELOG
+
+### v1.1.1 — 2026-04-24
+
+**Fixed**
+- Edge transparent favicon artifact — two root causes resolved:
+  - Sub-pixel coordinates in `resizeImage` (non-square sources) caused a faint 1 px fringe at the drawn image edge; all values now rounded with `Math.round()`
+  - ICO `ICONDIRENTRY` had `wPlanes = 1` / `wBitCount = 32` for PNG data; per spec both must be `0` — corrected to prevent Edge from attempting legacy BMP parsing
+
+---
 
 ### v1.1.0 — 2026-04-21
 
