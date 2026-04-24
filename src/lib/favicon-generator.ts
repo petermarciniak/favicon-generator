@@ -92,10 +92,10 @@ function resizeImage(img: HTMLImageElement, width: number, height: number): HTML
 
   // Contain: scale uniformly so the image fits entirely within (w, h)
   const scale = Math.min(width / srcW, height / srcH)
-  const scaledW = srcW * scale
-  const scaledH = srcH * scale
-  const x = (width  - scaledW) / 2
-  const y = (height - scaledH) / 2
+  const scaledW = Math.round(srcW * scale)
+  const scaledH = Math.round(srcH * scale)
+  const x = Math.round((width  - scaledW) / 2)
+  const y = Math.round((height - scaledH) / 2)
 
   ctx.drawImage(img, x, y, scaledW, scaledH)
   return canvas
@@ -142,8 +142,8 @@ async function buildIcoFile(entries: Array<{ size: number; blob: Blob }>): Promi
     view.setUint8 (base + 1, size >= 256 ? 0 : size) // height
     view.setUint8 (base + 2, 0)                      // color count
     view.setUint8 (base + 3, 0)                      // reserved
-    view.setUint16(base + 4, 1,   true)              // planes
-    view.setUint16(base + 6, 32,  true)              // bit count (32-bit RGBA PNG)
+    view.setUint16(base + 4, 0,   true)              // planes (0 for PNG-in-ICO per spec)
+    view.setUint16(base + 6, 0,   true)              // bit count (0 for PNG-in-ICO per spec)
     view.setUint32(base + 8, len, true)              // bytes in resource
     view.setUint32(base + 12, offset, true)          // offset to resource
     u8.set(new Uint8Array(buffers[i]), offset)
